@@ -1,5 +1,5 @@
 build {
-  sources = ["source.azure-arm.image"]
+  sources = ["source.azure-arm.image", "source.openstack.image", "source.qemu.image"]
   name = "ubuntu-24_04"
 
   provisioner "shell" {
@@ -230,8 +230,23 @@ provisioner "shell" {
   }
 
   provisioner "shell" {
+    only            = ["azure-arm.image"]
     execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
     inline          = ["sleep 30", "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"]
+  }
+
+  provisioner "shell" {
+    only            = ["openstack.image", "qemu.image"]
+    execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+    inline          = [
+      "sleep 30",
+      "cloud-init clean --logs --seed",
+      "rm -f /etc/ssh/ssh_host_*",
+      "truncate -s 0 /etc/machine-id",
+      "rm -f /var/lib/dbus/machine-id",
+      "export HISTSIZE=0",
+      "sync"
+    ]
   }
 
 }
