@@ -14,7 +14,7 @@ source "qemu" "image" {
   iso_checksum   = var.qemu_source_image_checksum
   disk_image     = true
   disk_size      = "${local.os_disk_size_gb}G"
-  disk_interface = "virtio"
+  disk_interface = var.qemu_disk_interface
   format         = "qcow2"
 
   accelerator = var.qemu_accelerator

@@ -62,3 +62,14 @@ variable "qemu_cpu_model" {
   EOT
   default     = "host"
 }
+
+variable "qemu_disk_interface" {
+  type        = string
+  description = <<-EOT
+    QEMU disk interface. Must be "virtio-scsi" (or "scsi") so the disk appears
+    as /dev/sda: the 99-readahead.rules udev rule only matches sd*/nvme*n*, and
+    System.Tests.ps1 asserts at least one such device exists. With plain
+    "virtio" the disk is /dev/vda and the test run fails the whole build.
+  EOT
+  default     = "virtio-scsi"
+}
