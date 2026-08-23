@@ -52,3 +52,13 @@ variable "qemu_accelerator" {
   description = "kvm, hvf, or none. 'none' is emulation only and far too slow for this build."
   default     = "kvm"
 }
+
+variable "qemu_cpu_model" {
+  type        = string
+  description = <<-EOT
+    QEMU -cpu model. Must be "host" (or another model exposing SSSE3+) on x86:
+    the default qemu64 model omits SSSE3 and Homebrew refuses to install with
+    "Homebrew's x86_64 support on Linux requires a CPU with SSSE3 support!".
+  EOT
+  default     = "host"
+}

@@ -19,9 +19,14 @@ source "qemu" "image" {
 
   accelerator = var.qemu_accelerator
   cpus        = var.qemu_cpus
-  memory      = var.qemu_memory
-  net_device  = "virtio-net"
-  headless    = true
+
+  # Without this QEMU presents the qemu64 model, which lacks SSSE3; the
+  # Homebrew installer then aborts the whole build.
+  qemuargs = [["-cpu", var.qemu_cpu_model]]
+
+  memory     = var.qemu_memory
+  net_device = "virtio-net"
+  headless   = true
 
   # Default user-mode networking gives the guest outbound NAT through the host,
   # so the build does not depend on any lab network being reachable.
