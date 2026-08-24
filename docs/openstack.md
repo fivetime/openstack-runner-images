@@ -86,9 +86,20 @@ packer build \
   -var 'os_flavor=<flavor>' \
   -var 'os_network=<neutron-network-uuid>' \
   -var 'os_floating_ip_network=<external-network>' \
-  -var 'os_volume_size=75' \
+  -var 'os_volume_size=0' \
   .
 ```
+
+> **`os_volume_size=0` 不是笔误。** 大于 0 时 packer 从 Cinder 卷启动,出镜像走
+> `volume upload-to-image`,而那条路用 chunked 编码上传 —— Glance 跑在 uWSGI 下
+> 默认收不了,构建会在最后一步失败,报
+> `Error waiting for image: Resource not found`(Glance 返回 500,调用方随即把
+> 镜像删掉,packer 轮询只剩 404)。修法见 OpenStack-Helm-Deploy.md 里
+> `${OVERRIDES_DIR}/glance/conf.yaml` 的 `glance_api_uwsgi` 段。
+>
+> 取 0 则改用 flavor 自带的本地盘,出镜像走 Nova 的 createImage,不经 Cinder。
+> 前提是 **flavor 的 disk 必须 ≥ 镜像所需**(本集群 `ci-build-8` 是 100 GiB,
+> 镜像 75 GiB)。
 
 For 26.04 use `-only='ubuntu-26_04.openstack.image' -var 'image_os=ubuntu26'`.
 
