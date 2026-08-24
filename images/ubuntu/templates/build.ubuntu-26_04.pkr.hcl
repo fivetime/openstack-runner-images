@@ -225,6 +225,16 @@ provisioner "shell" {
     scripts          = ["${path.root}/../scripts/build/post-build-validation.sh"]
   }
 
+  # RaaS: 把 runner 用户与 actions-runner 烘进镜像。开机时做这两件事实测
+  # 各花 32 秒和 25 秒,占 96 秒开机时间的一多半(见脚本内的数据)。
+  # 只给 openstack/qemu 出的镜像做 —— Azure 那条线不用 RaaS 这套。
+  provisioner "shell" {
+    only             = ["openstack.image", "qemu.image"]
+    environment_vars = ["RUNNER_VERSION=${var.raas_runner_version}"]
+    execute_command  = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+    scripts          = ["${path.root}/../scripts/build/install-raas-runner.sh"]
+  }
+
   provisioner "shell" {
     only            = ["azure-arm.image"]
     execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"

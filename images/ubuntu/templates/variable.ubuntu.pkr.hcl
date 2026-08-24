@@ -170,3 +170,11 @@ variable "install_user" {
   type    = string
   default = "installer"
 }
+
+# RaaS: 烘进镜像的 actions-runner 版本。
+# 必须与 RaaS 编排器配置里的 runner.version 一致 —— 不一致的话开机时
+# cloud-init 会重新下载覆盖,烘进来省下的 25 秒就白费了。
+variable "raas_runner_version" {
+  type    = string
+  default = "2.336.0"
+}
