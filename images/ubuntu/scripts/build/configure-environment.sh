@@ -61,9 +61,15 @@ echo 'ACTION=="add", SUBSYSTEM=="module", KERNEL=="nf_conntrack", RUN+="/usr/sbi
 # where disks are presented as rotational (ROTA=1). This floods the page cache
 # with unused data during random-access I/O and causes memory exhaustion and thrashing.
 # Azure v4 VM series use SCSI disks (sd*); v5/v6 use NVMe namespaces (nvme*n*).
+#
+# vd* is added for the OpenStack images: there the root disk is virtio-blk and
+# shows up as /dev/vda, so neither of the upstream patterns matches it. Without
+# it the rule covers nothing on OpenStack and the accompanying test fails on an
+# empty device list. Oversized readahead is worth avoiding on RBD too, so the
+# fix is to cover the device rather than to skip the check.
 if ! is_ubuntu22; then
     readahead_rule='/etc/udev/rules.d/99-readahead.rules'
-    echo 'ACTION=="add|change", KERNEL=="sd*|nvme*n*", ATTR{queue/read_ahead_kb}="128"' | tee "$readahead_rule"
+    echo 'ACTION=="add|change", KERNEL=="sd*|nvme*n*|vd*", ATTR{queue/read_ahead_kb}="128"' | tee "$readahead_rule"
 fi
 
 # Create symlink for tests running
