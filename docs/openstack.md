@@ -103,8 +103,24 @@ packer build \
 
 For 26.04 use `-only='ubuntu-26_04.openstack.image' -var 'image_os=ubuntu26'`.
 
-The resulting Glance image is named `packer-${image_os}-${image_version}`
-unless `-var managed_image_name=...` is given.
+The resulting Glance image is named `raas-runner-<os>-<image_version>`
+(e.g. `raas-runner-ubuntu-24.04-20260824.1`) unless `-var managed_image_name=...`
+is given. 前缀跟产品走而不跟平台走:这个镜像**两条产品线共用** —— GitHub 的
+agent 不在镜像里(开机时下载),镜像装的是工具链。
+
+## 构建之后必须跑的一步
+
+```bash
+./finalize-openstack-image.sh raas-runner-ubuntu-24.04-$(date -u +%Y%m%d).1 ubuntu-24.04
+```
+
+**不能省,也不要手工敲。** packer 的 openstack builder(v1.1.4)设不了镜像属性
+——`image_metadata` / `image_properties` 两个名字它都不认,只接受 `image_tags`,
+而 Glance 的 tag 不是 property。所以属性只能在构建后打。
+
+靠人记得的后果已经发生过:2026-08-23 构建的 ubuntu-26.04 镜像没有 `raas_os`,
+于是它对 RaaS 的目录**完全不可见** —— 没有报错、没有告警,只是那个 OS 永远
+开不出机器。同一批的 24.04 有,因为那次记得了。
 
 ## Validating without building
 
