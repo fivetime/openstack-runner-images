@@ -178,3 +178,18 @@ variable "raas_runner_version" {
   type    = string
   default = "2.336.0"
 }
+
+# RaaS BuildKit 后端。后端与 runner **共用这个镜像**:Glance 是 raw + Nova
+# images_type=rbd,开机是 COW 克隆,100 GiB 零复制(2026-08-29 实测比 3.5 GiB
+# 的云镜像还快 5 秒到 ACTIVE),而自建一个最小镜像换来的是永远自己维护一条
+# 流水线。
+variable "raas_buildkit_image" {
+  type    = string
+  default = "harbor.tue.jp/cache-dockerhub/moby/buildkit:v0.27.0"
+}
+
+# agent 由 openstack-raas 的 `make agent-image` 推到 Harbor。
+# **没有默认值**:装错版本比装不上更难查 —— 机器一切正常,只是行为对不上代码。
+variable "raas_bkagent_image" {
+  type = string
+}

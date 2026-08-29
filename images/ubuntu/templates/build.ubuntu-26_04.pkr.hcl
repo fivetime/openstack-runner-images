@@ -235,6 +235,18 @@ provisioner "shell" {
     scripts          = ["${path.root}/../scripts/build/install-raas-runner.sh"]
   }
 
+  # RaaS: BuildKit 后端(buildkitd + buildkit-runc + agent + binfmt)。
+  #
+  # 同一个镜像同时服务两条产品线。多出来的约 130 MB 二进制对 runner 那条无害,
+  # 而 binfmt 对它是**净赚** —— 现在 docker/setup-qemu-action 每次跑都要拉一次
+  # tonistiigi/binfmt。
+  provisioner "shell" {
+    only             = ["openstack.image", "qemu.image"]
+    environment_vars = ["BUILDKIT_IMAGE=${var.raas_buildkit_image}", "AGENT_IMAGE=${var.raas_bkagent_image}", "DEBIAN_FRONTEND=noninteractive"]
+    execute_command  = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+    scripts          = ["${path.root}/../scripts/build/install-raas-buildkit.sh"]
+  }
+
   provisioner "shell" {
     only            = ["azure-arm.image"]
     execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
