@@ -257,18 +257,13 @@ provisioner "shell" {
     inline          = ["sleep 30", "/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"]
   }
 
+  # 收尾:清 cloud-init 状态、host key、machine-id,**以及所有 SSH 授权密钥** ——
+  # packer 登录构建 VM 用的 ubuntu 密钥否则会原样带进镜像(2026-09-08 发现)。
+  # 步骤放在我们自己的脚本里,跟上游 rebase 时这个块不会再变。
   provisioner "shell" {
     only            = ["openstack.image", "qemu.image"]
     execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
-    inline          = [
-      "sleep 30",
-      "cloud-init clean --logs --seed",
-      "rm -f /etc/ssh/ssh_host_*",
-      "truncate -s 0 /etc/machine-id",
-      "rm -f /var/lib/dbus/machine-id",
-      "export HISTSIZE=0",
-      "sync"
-    ]
+    scripts         = ["${path.root}/../scripts/build/cleanup-openstack-image.sh"]
   }
 
 }

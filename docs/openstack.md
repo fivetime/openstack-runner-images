@@ -188,3 +188,11 @@ openstack image create --disk-format qcow2 --container-format bare \
 - **The software report step runs `pwsh`** and downloads
   `Ubuntu2404-Readme.md` / `software-report.json` back into the repo. That is
   upstream behaviour and applies to both platforms.
+
+## 收尾:镜像里不能留任何登录密钥(2026-09-08)
+
+最后一个 provisioner 是我们自己的 `images/ubuntu/scripts/build/cleanup-openstack-image.sh`:清 cloud-init
+状态、host key、machine-id、shell 历史,以及 **`/home/*/.ssh/authorized_keys` 与 root 的**。packer 是经
+`ubuntu` 用户的 authorized_keys 登进构建 VM 的,那份文件否则会原样带进镜像 —— 2026-09-08 的 RaaS
+Jenkins spike 就是靠它登进一台池镜像 VM 的。上游 Azure 线由 `waagent -deprovision+user` 兜住,
+qemu/openstack 线得自己做。RaaS 的池 cloud-init 开机还会再删一次,作为第二道保险。
