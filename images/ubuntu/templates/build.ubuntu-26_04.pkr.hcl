@@ -247,6 +247,16 @@ provisioner "shell" {
     scripts          = ["${path.root}/../scripts/build/install-raas-buildkit.sh"]
   }
 
+  # RaaS: 不让 initrd 碰网卡。dracut 在构建机上以 hostonly 重生 initramfs 时会把
+  # systemd-networkd 带进 initrd,开机第 3 秒的那轮 IPv6 DAD 约一半失败,管理网
+  # DHCPv6 从此不发(docs/openstack.md 的 26.04 第 4 个坑)。放在所有装包步骤之后,
+  # 免得后面的 apt 再触发一次重生。
+  provisioner "shell" {
+    only            = ["openstack.image", "qemu.image"]
+    execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+    scripts         = ["${path.root}/../scripts/build/configure-raas-initrd.sh"]
+  }
+
   provisioner "shell" {
     only            = ["azure-arm.image"]
     execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
