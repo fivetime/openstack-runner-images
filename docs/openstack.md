@@ -189,6 +189,27 @@ openstack image create --disk-format qcow2 --container-format bare \
   `Ubuntu2404-Readme.md` / `software-report.json` back into the repo. That is
   upstream behaviour and applies to both platforms.
 
+## Ubuntu 26.04 的三个坑(2026-09-11,raas-runner-ubuntu-26.04-20260911.1)
+
+**1. `qemu-user-static` 在 26.04 上只是虚拟包。** 26.04 的 qemu-user 是静态编译的(`static-pie`),binfmt
+注册由 `qemu-user-binfmt` 完成(标志 `OPF`,带 F);`qemu-user-static` 只是它 `Provides` 的名字,apt 不替你挑,
+报 `has no installation candidate` 退出码 100。`install-raas-buildkit.sh` 现在按"是不是实体包"选:24.04 装
+`qemu-user-static`,26.04 装 `qemu-user-binfmt`。这一步排在构建末尾,当天第一次失败发生在跑了 1 小时 46 分之后。
+
+**2. 底图用 `current/` 且 checksum 为 `none` 时,packer 会悄悄复用缓存里的旧底图。** 缓存按 URL 键,`current/`
+这个 URL 永远不变。要么钉带日期的版本目录并给 SHA256:
+
+```bash
+-var "qemu_source_image_url=https://cloud-images.ubuntu.com/resolute/20260823/resolute-server-cloudimg-amd64.img" \
+-var "qemu_source_image_checksum=sha256:<该目录 SHA256SUMS 里的值>"
+```
+
+要么构建前删掉 `~/.cache/packer` 里对应的文件。
+
+**3. 模板里新加的 RaaS 脚本,先在目标 OS 的一次性 VM 上单独跑一遍。** RaaS 的几步都在工具链装完之后,完整构建
+要近两小时才跑到。用上一版同 OS 的镜像起一台 VM(`--config-drive true`,不依赖元数据服务),把脚本拉进去单独执行,
+十几分钟就能暴露包名、路径这类问题。
+
 ## 收尾:镜像里不能留任何登录密钥(2026-09-08)
 
 最后一个 provisioner 是我们自己的 `images/ubuntu/scripts/build/cleanup-openstack-image.sh`:清 cloud-init
