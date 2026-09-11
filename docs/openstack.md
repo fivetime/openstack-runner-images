@@ -189,7 +189,7 @@ openstack image create --disk-format qcow2 --container-format bare \
   `Ubuntu2404-Readme.md` / `software-report.json` back into the repo. That is
   upstream behaviour and applies to both platforms.
 
-## Ubuntu 26.04 的四个坑(2026-09-11,raas-runner-ubuntu-26.04-20260911.1)
+## Ubuntu 26.04 的三个坑(2026-09-11,raas-runner-ubuntu-26.04-20260911.1)
 
 **1. `qemu-user-static` 在 26.04 上只是虚拟包。** 26.04 的 qemu-user 是静态编译的(`static-pie`),binfmt
 注册由 `qemu-user-binfmt` 完成(标志 `OPF`,带 F);`qemu-user-static` 只是它 `Provides` 的名字,apt 不替你挑,
@@ -209,28 +209,6 @@ openstack image create --disk-format qcow2 --container-format bare \
 **3. 模板里新加的 RaaS 脚本,先在目标 OS 的一次性 VM 上单独跑一遍。** RaaS 的几步都在工具链装完之后,完整构建
 要近两小时才跑到。用上一版同 OS 的镜像起一台 VM(`--config-drive true`,不依赖元数据服务),把脚本拉进去单独执行,
 十几分钟就能暴露包名、路径这类问题。
-
-**4. dracut 把网络带进了 initrd,约一半的开机 IPv6 链路本地地址 DAD 失败。** 26.04 用 dracut 生成 initramfs。
-构建时 dracut 以 hostonly 模式在跑着 systemd-networkd 的构建 VM 上重生 initrd,`cloud-initramfs-dyn-netconf`
-又依赖 `dracut-network`,结果 initrd 里有 `systemd-networkd`、`net-lib`、`dyn-netconf`,开机第 3 秒就把网卡
-拉起来做了一轮 IPv6 DAD。与此同时 tap 上会出现一个带**本机 MAC**、目标是本机链路本地地址、但 **nonce 不同**
-的 NS(在宿主 tap 上抓包实见,发送方尚未查明),撞上这轮 DAD 就被判为冲突:
-
-```
-IPv6: ens3: IPv6 duplicate address fe80::f816:3eff:fe75:23af used by fa:16:3e:75:23:af detected!
-inet6 fe80::f816:3eff:fe75:23af/64 scope link dadfailed tentative
-```
-
-没有可用的链路本地地址,DHCPv6 就发不出 Solicit —— RaaS 管理网只有 IPv6、只靠 DHCPv6,机器因此永远连不上,
-池子 boot_timeout 后清扫。当天池机器与探测机合计 26.04 约一半开机中招,24.04(initramfs-tools,initrd 不碰网卡)
-一次没有;Ubuntu 官方 26.04 cloudimg 的 initrd 里也没有网络。**重启 networkd 修不了**,内核不会为已经
-dadfailed 的地址重做 DAD;`ip link set down/up` 能。
-
-修法:`configure-raas-initrd.sh` 写 `/etc/dracut.conf.d/90-raas-no-initrd-network.conf`
-(`omit_dracutmodules+=" systemd-networkd net-lib dyn-netconf kernel-network-modules qemu-net "`),
-`dracut --regenerate-all --force`,并在构建期检查每个 initrd 里都没有这些模块。一次性 VM 上验证过:重生后重启,
-根盘照常挂载,initrd 阶段不再出现 `zzzz-dracut-default.network` 与网卡改名。RaaS 的 user-data 另有兜底
-(发现 dadfailed 就弹链路,见 openstack-raas `doc/architecture.md` §4.6),修复前的镜像靠它开机。
 
 ## 收尾:镜像里不能留任何登录密钥(2026-09-08)
 
