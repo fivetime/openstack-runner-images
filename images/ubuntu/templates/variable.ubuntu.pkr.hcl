@@ -176,7 +176,7 @@ variable "install_user" {
 # cloud-init 会重新下载覆盖,烘进来省下的 25 秒就白费了。
 variable "raas_runner_version" {
   type    = string
-  default = "2.336.0"
+  default = "2.337.0"
 }
 
 # RaaS BuildKit 后端。后端与 runner **共用这个镜像**:Glance 是 raw + Nova

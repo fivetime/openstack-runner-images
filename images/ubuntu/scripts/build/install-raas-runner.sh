@@ -40,7 +40,16 @@ chown -R "${RUNNER_USER}:${RUNNER_USER}" "${RUNNER_HOME}/actions-runner"
 echo "${RUNNER_VERSION}" > "${RUNNER_HOME}/actions-runner/.baked-version"
 chown "${RUNNER_USER}:${RUNNER_USER}" "${RUNNER_HOME}/actions-runner/.baked-version"
 
+# Give the runner user a systemd user session at boot (rootless podman socket,
+# systemctl --user). This is exactly what `loginctl enable-linger` writes; writing
+# it here does not need logind to be running inside the build VM. The pool's
+# cloud-init still enables linger and waits for the session bus, because a spec
+# can point at an older image without this file (openstack-raas doc/machine-config.md).
+install -d -m 0755 /var/lib/systemd/linger
+touch "/var/lib/systemd/linger/${RUNNER_USER}"
+
 # 自检:装错了要在构建时就失败,而不是等到租户的作业开不起来。
 test -x "${RUNNER_HOME}/actions-runner/run.sh"
 id -nG "${RUNNER_USER}" | tr ' ' '\n' | grep -qx docker
+test -f "/var/lib/systemd/linger/${RUNNER_USER}"
 echo "raas: baked ${RUNNER_USER} + actions-runner ${RUNNER_VERSION}"
