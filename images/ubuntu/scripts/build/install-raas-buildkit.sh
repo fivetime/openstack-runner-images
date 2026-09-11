@@ -100,9 +100,20 @@ apt-get update
 # ⚠️ 本集群 23 个节点全 amd64,没有 arm 硬件(§7.1)。所以 arm64 走的是
 # **模拟**,慢一个数量级 —— 这不是架构缺口,是硬件缺口;接了 arm 计算节点
 # 之后同一套代码按 flavor 配就行。
+# Ubuntu 26.04 builds qemu-user statically and registers it through qemu-user-binfmt
+# (binfmt flags OPF, so F is there); on 26.04 qemu-user-static is only a virtual name
+# that apt refuses to pick ("has no installation candidate" - the 2026-09-11 26.04
+# image build died on it after 1 h 46 min). On 24.04 qemu-user-static is a real
+# package and is what this script has always installed. Pick by whether it is real.
+if apt-cache show qemu-user-static 2>/dev/null | grep -q '^Version:'; then
+    QEMU_PKGS=qemu-user-static
+else
+    QEMU_PKGS=qemu-user-binfmt
+fi
+echo "qemu for cross-arch builds: $QEMU_PKGS"
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     e2fsprogs util-linux ca-certificates \
-    qemu-user-static binfmt-support
+    $QEMU_PKGS binfmt-support
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
